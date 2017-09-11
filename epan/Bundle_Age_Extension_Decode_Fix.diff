@@ -1,0 +1,65 @@
+diff --git a/epan/dissectors/packet-dtn.c b/epan/dissectors/packet-dtn.c
+index 0b49efe..53b28ae 100644
+--- a/epan/dissectors/packet-dtn.c
++++ b/epan/dissectors/packet-dtn.c
+@@ -204,6 +204,7 @@ static int hf_block_control_block_cteb_creator_custodian_eid = -1;
+ 
+ /* Non-Primary Block Type Code Variable */
+ static int hf_bundle_block_type_code = -1;
++static int hf_bundle_age_extension_block_code = -1;
+ static int hf_bundle_unprocessed_block_data = -1;
+ 
+ /* ECOS Flag Variables */
+@@ -368,6 +369,7 @@ static const value_string bundle_block_type_codes[] = {
+     {0x09, "Extension Security Block"},
+     {0x0a, "Custody Transfer Enhancement Block"},
+     {0x13, "Extended Class of Service Block"},
++    {0x14, "Bundle Age Extension Block"},
+     {0, NULL}
+ };
+ 
+@@ -1509,6 +1511,7 @@ display_extension_block(proto_tree *tree, tvbuff_t *tvb, packet_info *pinfo, int
+     int           sdnv_length;
+     int           block_length;
+     int           block_overhead;
++    int           bundle_age;
+     guint8        type;
+     unsigned int  control_flags;
+     proto_tree   *block_flag_tree;
+@@ -1598,6 +1601,13 @@ display_extension_block(proto_tree *tree, tvbuff_t *tvb, packet_info *pinfo, int
+         offset += block_length;
+         break;
+     }
++    case BUNDLE_BLOCK_TYPE_BUNDLE_AGE_EXTENSION:
++    {
++        bundle_age = evaluate_sdnv(tvb, offset, &sdnv_length);
++        proto_tree_add_int(block_tree, hf_bundle_age_extension_block_code, tvb, offset, sdnv_length, bundle_age/1000000);
++        offset += block_length;
++        break;
++    }
+     case BUNDLE_BLOCK_TYPE_CUSTODY_TRANSFER:
+     {
+         int custody_id;
+@@ -2855,6 +2865,10 @@ proto_register_bundle(void)
+          {"Block Type Code", "bundle.block_type_code",
+           FT_UINT8, BASE_DEC, VALS(bundle_block_type_codes), 0x0, NULL, HFILL}
+         },
++        {&hf_bundle_age_extension_block_code,
++         {"Bundle Age in seconds", "bundle.age_extension_block_code",
++          FT_INT32, BASE_DEC, NULL, 0x0, NULL, HFILL}
++        },
+         {&hf_bundle_unprocessed_block_data,
+          {"Block Data", "bundle.block_data",
+           FT_STRINGZPAD, BASE_NONE, NULL, 0x0, NULL, HFILL}
+diff --git a/epan/dissectors/packet-dtn.h b/epan/dissectors/packet-dtn.h
+index 291c563..4c83cff 100644
+--- a/epan/dissectors/packet-dtn.h
++++ b/epan/dissectors/packet-dtn.h
+@@ -101,6 +101,7 @@
+ #define BUNDLE_BLOCK_TYPE_EXTENSION_SECURITY    0x09 /* RFC6257 */
+ #define BUNDLE_BLOCK_TYPE_CUSTODY_TRANSFER      0x0a /* http://bioserve.colorado.edu/bp-acs/ */
+ #define BUNDLE_BLOCK_TYPE_EXTENDED_COS          0x13 /* http://tools.ietf.org/html/draft-irtf-dtnrg-ecos-02 */
++#define BUNDLE_BLOCK_TYPE_BUNDLE_AGE_EXTENSION  0x14 /* ION NASA specific */
+ 
+ /* Payload Header Processing Flags */
+ #define PAYLOAD_PROCFLAGS_REPLICATE_MASK        0x01
